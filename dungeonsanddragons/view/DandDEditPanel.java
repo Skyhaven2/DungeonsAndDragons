@@ -114,26 +114,6 @@ public class DandDEditPanel extends JPanel
 			@Override
 			public void itemStateChanged(ItemEvent e)
 			{
-				// if (e.getStateChange() == ItemEvent.SELECTED &&
-				// !(tablesComboBox.getSelectedItem().toString().equals("...")))
-				// {
-				// currentSelectedTable =
-				// tablesComboBox.getSelectedItem().toString();
-				// String query = "SELECT * FROM " + currentSelectedTable;
-				// String[][] newData =
-				// baseController.getDBController().runSELECTQueryTableGetTable(query);
-				// String[] columnHeaders =
-				// baseController.getDBController().runSELECTQueryGetColumnNames(query);
-				// editTableModel.setDataVector(newData, columnHeaders);
-				// editTable.setModel(editTableModel);
-				// editTable.getTableHeader().setFont(new Font(null, Font.BOLD,
-				// 12));
-				// myRender.buildLargestHeight(newData.length);
-				// for (int col = 0; col < editTable.getColumnCount(); col++)
-				// {
-				// editTable.getColumnModel().getColumn(col).setCellRenderer(myRender);
-				// }
-				// }
 
 				if (e.getStateChange() == ItemEvent.SELECTED && !(tablesComboBox.getSelectedItem().toString().equals("...")))
 				{
@@ -141,30 +121,10 @@ public class DandDEditPanel extends JPanel
 					String query = baseController.getDBController().buildSELECTQuery(currentSelectedTable);
 					String[][] newData = baseController.getDBController().runSELECTQueryTableGetTable(query);
 					String[] columnHeaders = baseController.getDBController().runSELECTQueryGetColumnNames(query);
-					editTableModel = new DefaultTableModel();
-
-					// editTableModel.setDataVector(newData, columnHeaders);
-					myRender.buildLargestHeight(newData.length);
-					for (int col = 0; col < columnHeaders.length; col++)
-					{
-						if (baseController.getDBController().checkIfComboBoxForEdit(col))
-						{
-							String[] newComboBoxData = baseController.getDBController().getComboBoxForEdit(col);
-							
-							editTableModel.addColumn(columnHeaders[col]);
-						}
-						else
-						{
-							String[] newStringData = new String[newData.length];
-							for (int row = 0; row < newStringData.length; row++)
-							{
-								newStringData[row] = newData[row][col];
-							}
-							editTableModel.addColumn(columnHeaders[col], newStringData);
-						}
-					}
-
+					editTableModel.setDataVector(newData, columnHeaders);
 					editTable.setModel(editTableModel);
+
+					myRender.buildLargestHeight(newData.length);
 
 					for (int col = 0; col < columnHeaders.length; col++)
 					{
@@ -173,6 +133,8 @@ public class DandDEditPanel extends JPanel
 							String[] newComboBoxData = baseController.getDBController().getComboBoxForEdit(col);
 							JComboBoxTableRender myJComboBoxTableRender = new JComboBoxTableRender(newComboBoxData);
 							editTable.getColumnModel().getColumn(col).setCellRenderer(myJComboBoxTableRender);
+							JComboBoxTableEditor myJComboBoxTableEditor = new JComboBoxTableEditor(newComboBoxData);
+							editTable.getColumnModel().getColumn(col).setCellEditor(myJComboBoxTableEditor);
 						}
 						else
 						{
@@ -181,7 +143,6 @@ public class DandDEditPanel extends JPanel
 					}
 
 					editTable.getTableHeader().setFont(new Font(null, Font.BOLD, 12));
-
 				}
 			}
 
@@ -196,17 +157,53 @@ public class DandDEditPanel extends JPanel
 				// This gets fired when the SELECT statement is sent too!
 				if (change.getType() == TableModelEvent.UPDATE)
 				{
+					boolean isJCombobox = false;
 					try
 					{
-						int row = change.getFirstRow();
-						int column = change.getColumn();
-						Object newData = editTableModel.getValueAt(row, column);
+						if (editTable.getColumnModel().getColumn(change.getColumn()).getCellEditor() instanceof JComboBoxTableEditor)
+						{
+							isJCombobox = true;
+						}
+						else
+						{
 
-						baseController.getDBController().runUPDATEQuery(newData.toString(), column, row, currentSelectedTable);
+						}
 					}
 					catch (Exception currentException)
 					{
 
+					}
+
+					if (isJCombobox)
+					{
+						try
+						{
+							int row = change.getFirstRow();
+							int column = change.getColumn();
+							Object newData = editTableModel.getValueAt(row, column);
+							String id = baseController.getDBController().findId(newData.toString(), column);
+
+							baseController.getDBController().runUPDATEQuery(id, column, row, currentSelectedTable);
+						}
+						catch (Exception currentException)
+						{
+
+						}
+					}
+					else
+					{
+						try
+						{
+							int row = change.getFirstRow();
+							int column = change.getColumn();
+							Object newData = editTableModel.getValueAt(row, column);
+
+							baseController.getDBController().runUPDATEQuery(newData.toString(), column, row, currentSelectedTable);
+						}
+						catch (Exception currentException)
+						{
+
+						}
 					}
 
 				}

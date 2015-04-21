@@ -12,14 +12,25 @@ public class JComboBoxTableRender extends JComboBox implements TableCellRenderer
 	{
 		super(items);
 	}
-	
+
 	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
 	{
-		System.out.println(value);
+		if (isSelected)
+		{
+			setForeground(table.getSelectionForeground());
+			super.setBackground(table.getSelectionBackground());
+		}
+		else
+		{
+			setForeground(table.getForeground());
+			setBackground(table.getBackground());
+		}
 		setSelectedItem(value);
-		addItem("hi");
-		addItem("bye");
+		if(table.getRowHeight(row) < this.getPreferredSize().height)
+		{
+			table.setRowHeight(this.getPreferredSize().height);
+		}
 		return this;
 	}
 }

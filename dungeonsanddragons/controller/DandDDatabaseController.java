@@ -597,6 +597,48 @@ public class DandDDatabaseController
 		return needsAComboBox;
 	}
 	
+	public String findId(String value, int columnNumber)
+	{
+		int relationRow = 1;
+		
+		for (int row = 0; row < foriegnKeyRelationData.length; row++)
+		{
+			if(columnNames[columnNumber].equals(foriegnKeyRelationData[row][2]))
+			{
+				relationRow = row;
+			}
+		}
+		
+		String query = "SELECT `" + foriegnKeyRelationData[relationRow][0] + "`.`" + foriegnKeyRelationData[relationRow][1] 
+				+ "`, `"+ foriegnKeyRelationData[relationRow][0] + "`.`";
+		
+		for (int location = 0; location < DandDTableMostImportantColumnNames.length; location++)
+		{
+			if (foriegnKeyRelationData[relationRow][0].equals(DandDTableMostImportantColumnNames[location][0]))
+			{
+				query += DandDTableMostImportantColumnNames[location][1];
+			}
+		}
+		
+		query += "` FROM `" + foriegnKeyRelationData[relationRow][0] + "`";
+		
+		String[][] idAndValues = runSELECTQueryTableGetTable(query);
+		String newId = "";
+		
+		for(int row = 0; row < idAndValues.length; row++)
+		{
+			for(int col = 0; col < idAndValues[0].length; col++)
+			{
+				if(idAndValues[row][1].equals(value))
+				{
+					newId = idAndValues[row][0];
+				}
+			}
+		}
+		
+		return newId;
+	}
+	
 	public String[] getComboBoxForEdit(int columnNumber)
 	{
 		int relationRow = -1;
