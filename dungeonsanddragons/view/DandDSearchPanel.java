@@ -23,17 +23,56 @@ import dungeonsanddragons.controller.DandDAppController;
 
 public class DandDSearchPanel extends JPanel
 {
+	/**
+	 * the reference to the app controller
+	 */
 	private DandDAppController baseController;
+	/**
+	 * Table column renderer used with JTextAreas
+	 * all data is rendered with this renderer on this page
+	 */
 	private TableRender myRender;
+	/**
+	 * the layout for DandDSearchPanel
+	 */
 	private SpringLayout layout;
+	/**
+	 * button that switches to the edit page
+	 */
 	private JButton toEditPanelButton;
+	/**
+	 * The image used at the top of each page
+	 */
 	private ImageIcon DandDLogo;
+	/**
+	 * contains the d and d logo, to be placed at the top of the panel
+	 */
 	private JLabel DandDLogoLabel;
+	/**
+	 * The label that contains the title of the page
+	 * this is the search page
+	 */
 	private JLabel title;
+	/**
+	 * This is the table that contains the data retrieved from the database
+	 */
 	private JTable searchTable;
+	/**
+	 * Model used with the generated data table
+	 */
 	private DefaultTableModel searchTableModel;
+	/**
+	 * contains the data table
+	 */
 	private JScrollPane searchTablePane;
-	private JComboBox tablesComboBox;
+	/**
+	 * Contains the table names of the tables available in the d and d database
+	 * generates a table when a table is selected
+	 */
+	private JComboBox<String> tablesComboBox;
+	/**
+	 * Contains the table names of the tables available in the d and d database
+	 */
 	private String[] tablesComboBoxArray;
 
 	public DandDSearchPanel(DandDAppController baseController)
@@ -66,6 +105,9 @@ public class DandDSearchPanel extends JPanel
 		setupListeners();
 	}
 
+	/**
+	 * adds the components to the panel and sets their properties
+	 */
 	private void setupPanel()
 	{
 		this.setBackground(Color.BLACK);
@@ -85,6 +127,9 @@ public class DandDSearchPanel extends JPanel
 		this.add(tablesComboBox);
 	}
 
+	/**
+	 * sets the location of the components
+	 */
 	private void setupLayout()
 	{
 		layout.putConstraint(SpringLayout.SOUTH, toEditPanelButton, -10, SpringLayout.SOUTH, this);
@@ -98,6 +143,9 @@ public class DandDSearchPanel extends JPanel
 		layout.putConstraint(SpringLayout.NORTH, DandDLogoLabel, 15, SpringLayout.NORTH, this);
 	}
 
+	/**
+	 * adds listeners to the components that require one
+	 */
 	private void setupListeners()
 	{
 		toEditPanelButton.addActionListener(new ActionListener()
@@ -120,7 +168,7 @@ public class DandDSearchPanel extends JPanel
 				if (e.getStateChange() == ItemEvent.SELECTED && !(tablesComboBox.getSelectedItem().toString().equals("...")))
 				{
 					String query = baseController.getDBController().buildSELECTQuery(tablesComboBox.getSelectedItem().toString());
-					String[][] newData = baseController.getDBController().runSELECTQueryTableGetTable(query);
+					String[][] newData = baseController.getDBController().runSELECTQueryGetTable(query);
 					String[] columnHeaders = baseController.getDBController().runSELECTQueryGetColumnNames(query);
 					searchTableModel.setDataVector(newData, columnHeaders);
 					searchTable.setModel(searchTableModel);
@@ -136,6 +184,10 @@ public class DandDSearchPanel extends JPanel
 		});
 	}
 
+	/**
+	 * fills the tablesComboBoxArray with the available d and d table names from the database
+	 * the first entry is always the blank table "..."
+	 */
 	private void buildTableComboBoxArray()
 	{
 		String[] tablesAvailable = baseController.getDBController().findTablesDandD();

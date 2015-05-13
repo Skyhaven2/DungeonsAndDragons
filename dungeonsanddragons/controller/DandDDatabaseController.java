@@ -11,6 +11,8 @@ import java.sql.Statement;
 import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 
+import dungeonsanddragons.model.FieldRelationData;
+
 public class DandDDatabaseController
 {
 
@@ -42,12 +44,11 @@ public class DandDDatabaseController
 	 */
 	private String[][] tableData;
 	/**
-	 * Each row in the array represent each column in the table data col 0 is
-	 * linked table name col 1 is linked column name col 2 is the column name of
-	 * the column it relates to (row 'A' col 2 of foriegnKeyRelationData equals
-	 * col 'A' of columnNames)
+	 * Contains FieldRelationData objects that each contain information
+	 * about how a column is related to other columns in other tables
 	 */
-	private String[][] foriegnKeyRelationData;
+	private FieldRelationData[] foreignKeyRelationData;
+	
 	/**
 	 * Contains information of what column contains the most important info for
 	 * each table col 0 is the table name col 1 is the most important column
@@ -156,7 +157,58 @@ public class DandDDatabaseController
 
 		return DandDTableMostImportantColumnNames;
 	}
-	
+
+	// Helper Methods (Check or find)
+	// ----------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * This method finds the number of rows in a ResultSet
+	 * 
+	 * @param searchResultSet
+	 *            The set to search in.
+	 * @return The number of rows in the set.
+	 */
+	private int findNumberOfRows(ResultSet searchResultSet)
+	{
+		int numberOfRows = 0;
+		try
+		{
+			searchResultSet.last();
+			numberOfRows = searchResultSet.getRow();
+			searchResultSet.beforeFirst();
+		}
+		catch (SQLException currentSQLError)
+		{
+			displayErrors(currentSQLError);
+		}
+		return numberOfRows;
+	}
+
+	/**
+	 * Finds a cell string value
+	 * 
+	 * @param columnHeaderName
+	 *            The name of the column header of the column to be selected
+	 *            from
+	 * @param row
+	 *            The row to be selected from
+	 * @return A string value of a selected cell
+	 */
+	private String findCellValue(String columnHeaderName, int row)
+	{
+		String cellValue = "";
+
+		for (int col = 0; col < columnNames.length; col++)
+		{
+			if (columnNames[col].equals(columnHeaderName))
+			{
+				cellValue = tableData[row][col];
+			}
+		}
+
+		return cellValue;
+	}
+
 	/**
 	 * This method returns a String[] containing a list of available tables
 	 * located in the dungeons_and_dragons database
@@ -192,60 +244,111 @@ public class DandDDatabaseController
 		}
 	}
 
-	// Helper Methods
-	//----------------------------------------------------------------------------------------------------------------
-	
 	/**
-	 * This method finds the number of rows in a ResultSet
+	 * Checks if a given field/column's data has a foreign key attached to it if
+	 * it does, then that column needs to be draw with a ComboBox
 	 * 
-	 * @param searchResultSet
-	 *            The set to search in.
-	 * @return The number of rows in the set.
+	 * @param columnNumber
+	 *            the column to be checked
+	 * @return true if the column needs to be drawn with a ComboBox
 	 */
-	private int findNumberOfRows(ResultSet searchResultSet)
+	public boolean checkIfComboBoxForEdit(int columnNumber)
 	{
-		int numberOfRows = 0;
-		try
-		{
-			searchResultSet.last();
-			numberOfRows = searchResultSet.getRow();
-			searchResultSet.beforeFirst();
-		}
-		catch (SQLException currentSQLError)
-		{
-			displayErrors(currentSQLError);
-		}
-		return numberOfRows;
-	}
-	
-	/**
-	 * Finds a cell string value
-	 * 
-	 * @param columnHeaderName
-	 *            The name of the column header of the column to be selected
-	 *            from
-	 * @param row
-	 *            The row to be selected from
-	 * @return A string value of a selected cell
-	 */
-	private String findCellValue(String columnHeaderName, int row)
-	{
-		String cellValue = "";
+		boolean needsAComboBox = false;
 
-		for (int col = 0; col < columnNames.length; col++)
+		for (int row = 0; row < foreignKeyRelationData.length; row++)
 		{
-			if (columnNames[col].equals(columnHeaderName))
+			if (foreignKeyRelationData[row].getColName().equals(columnNames[columnNumber]))
 			{
-				cellValue = tableData[row][col];
+				needsAComboBox = true;
 			}
 		}
 
-		return cellValue;
+		return needsAComboBox;
 	}
-	
+
+	/**
+	 * Finds the relevant foreign key relation data for the given column in the
+	 * selected table
+	 * 
+	 * @param columnNumber
+	 *            The column that needs its key relation information
+	 * @return the row in foriegnKeyRelationData where the info is stored
+	 */
+	private int findRelationRow(int columnNumber)
+	{
+		int relationRow = -1;
+		for (int row = 0; row < foreignKeyRelationData.length; row++)
+		{
+			if (foreignKeyRelationData[row].getColName().equals(columnNames[columnNumber]))
+			{
+				relationRow = row;
+			}
+		}
+		return relationRow;
+	}
+
+	/**
+	 * Finds the associated most important column name (used with JComboBox) for
+	 * the table located in the given row of foriegnKeyRelationData
+	 * 
+	 * @param relationRow
+	 *            the row in foriegnKeyRelationData where the desired related
+	 *            table name is stored
+	 * @return the column name of the related table that should be shown
+	 */
+	private String findMostImportantColumnName(int relationRow)
+	{
+		String colName = "";
+		for (int location = 0; location < DandDTableMostImportantColumnNames.length; location++)
+		{
+			if (foreignKeyRelationData[relationRow].getRelatedTableName().equals(DandDTableMostImportantColumnNames[location][0]))
+			{
+				colName = DandDTableMostImportantColumnNames[location][1];
+			}
+		}
+		return colName;
+	}
+
+	/**
+	 * Finds the primary id of a certain value in a table. Used with JComboBox.
+	 * The player Camron has an id of 1. I choose Camron in the JComboBox and
+	 * this method is used to find his id of 1 to pass to the database.
+	 * 
+	 * @param value
+	 *            a non-primary value located in a related table
+	 * @param columnNumber
+	 *            the column the JComboBox is found in
+	 * @return the associated id for the value
+	 */
+	public String findIdInRelatedTable(String value, int columnNumber)
+	{
+		int relationRow = findRelationRow(columnNumber);
+
+		String query = "SELECT `" + foreignKeyRelationData[relationRow].getRelatedTableName() + "`.`" + foreignKeyRelationData[relationRow].getRelatedColumnName() + "`, `" + foreignKeyRelationData[relationRow].getRelatedTableName() + "`.`";
+
+		query += findMostImportantColumnName(relationRow);
+
+		query += "` FROM `" + foreignKeyRelationData[relationRow].getRelatedTableName() + "`";
+
+		// Col 0 is id and Col 1 is the col used by the JCombobox
+		String[][] idAndValues = runSELECTQueryGetTable(query);
+		String newId = "";
+
+		for (int row = 0; row < idAndValues.length; row++)
+		{
+			if (idAndValues[row][1].equals(value))
+			{
+				newId = idAndValues[row][0];
+			}
+		}
+
+		return newId;
+	}
+
 	// collectTableInfo Methods
-	//-----------------------------------------------------------------------------------------------------------------
-	
+	// -----------------------------------------------------------------------------------------------------------------
+
 	/**
 	 * fills that variables related to table information
 	 * 
@@ -254,7 +357,7 @@ public class DandDDatabaseController
 	 */
 	public void collectTableInfo(String tableName)
 	{
-		String query = "SELECT * FROM " + tableName; 
+		String query = "SELECT * FROM " + tableName;
 
 		try
 		{
@@ -279,7 +382,7 @@ public class DandDDatabaseController
 				columnNames[currentCol] = metaDataOfAnswer.getColumnLabel(currentCol + 1);
 			}
 			setPrimaryKeyColumnName(tableName);
-			foriegnKeyRelationData = getForeignKeyRelationData(tableName);
+			foreignKeyRelationData = getForeignKeyRelationData(tableName);
 			answer.close();
 			SELECTStatement.close();
 		}
@@ -289,12 +392,13 @@ public class DandDDatabaseController
 		}
 
 	}
-	
+
 	/**
 	 * Sets the primary key column name variable
 	 * 
-	 * @param tableName The table to be searched
-	 *           
+	 * @param tableName
+	 *            The table to be searched
+	 * 
 	 */
 	private void setPrimaryKeyColumnName(String tableName)
 	{
@@ -311,7 +415,7 @@ public class DandDDatabaseController
 			displayErrors(currentSQLError);
 		}
 	}
-	
+
 	/**
 	 * Finds the foreign key relation data
 	 * 
@@ -319,23 +423,18 @@ public class DandDDatabaseController
 	 *            The table to analyze
 	 * @return the foreign key relation data for each column in the table
 	 */
-	private String[][] getForeignKeyRelationData(String tableName)
+	private FieldRelationData[] getForeignKeyRelationData(String tableName)
 	{
 		try
 		{
 			DatabaseMetaData metaDataOfDatabase = databaseConnection.getMetaData();
 			ResultSet foreignKeyResultSet = metaDataOfDatabase.getImportedKeys(null, null, tableName);
 			int numberOfRows = findNumberOfRows(foreignKeyResultSet);
-			String[][] foreignKeyRelations = new String[numberOfRows][3];
+			FieldRelationData[] foreignKeyRelations = new FieldRelationData[numberOfRows];
 			int row = 0;
 			while (foreignKeyResultSet.next())
 			{
-				// keyLinkedToTableName
-				foreignKeyRelations[row][0] = foreignKeyResultSet.getString("PKTABLE_NAME");
-				// keyLinkedToColumnName
-				foreignKeyRelations[row][1] = foreignKeyResultSet.getString("PKCOLUMN_NAME");
-				// keyColumnNameFromSelectedTable
-				foreignKeyRelations[row][2] = foreignKeyResultSet.getString("FKCOLUMN_NAME");
+				foreignKeyRelations[row] = new FieldRelationData(foreignKeyResultSet.getString("PKCOLUMN_NAME"), foreignKeyResultSet.getString("PKTABLE_NAME"), foreignKeyResultSet.getString("FKTABLE_NAME"), foreignKeyResultSet.getString("FKCOLUMN_NAME"));
 
 				row++;
 			}
@@ -345,15 +444,15 @@ public class DandDDatabaseController
 		catch (SQLException currentSQLError)
 		{
 			displayErrors(currentSQLError);
-			String[][] emptyArray = new String[0][0];
-			emptyArray[0][0] = "";
+			FieldRelationData[] emptyArray = new FieldRelationData[0];
+			emptyArray[0] = new FieldRelationData("", "", "", "");
 			return emptyArray;
 		}
 	}
-	
+
 	// Build query methods
-	//---------------------------------------------------------------------------------------------------------------
-	
+	// ---------------------------------------------------------------------------------------------------------------
+
 	public String buildSELECTQuery(String tableName)
 	{
 		collectTableInfo(tableName);
@@ -365,10 +464,11 @@ public class DandDDatabaseController
 	}
 
 	/**
-	 * This is sub-method for buildSELECTQuery
-	 * This builds the SELECT part of the query
-	 * Only selects primary data (no IDs)
-	 * @param tableName Table to select from
+	 * This is sub-method for buildSELECTQuery This builds the SELECT part of
+	 * the query Only selects primary data (no IDs)
+	 * 
+	 * @param tableName
+	 *            Table to select from
 	 * @return String of the first part of the query
 	 */
 	private String buildSELECTPartOfQuery(String tableName)
@@ -378,21 +478,21 @@ public class DandDDatabaseController
 
 		for (int col = 0; col < columnNames.length; col++)
 		{
-			for (int row = 0; row < foriegnKeyRelationData.length; row++)
+			for (int row = 0; row < foreignKeyRelationData.length; row++)
 			{
-				if (columnNames[col].equals(foriegnKeyRelationData[row][2]))
+				if (columnNames[col].equals(foreignKeyRelationData[row].getColName()))
 				{
-					SELECTQuery += " `" + foriegnKeyRelationData[row][0] + "`.`";
+					SELECTQuery += " `" + foreignKeyRelationData[row].getRelatedTableName() + "`.`";
 					for (int location = 0; location < DandDTableMostImportantColumnNames.length; location++)
 					{
-						if (foriegnKeyRelationData[row][0].equals(DandDTableMostImportantColumnNames[location][0]))
+						if (foreignKeyRelationData[row].getRelatedTableName().equals(DandDTableMostImportantColumnNames[location][0]))
 						{
 							SELECTQuery += DandDTableMostImportantColumnNames[location][1];
 						}
 					}
 					SELECTQuery += "`";
 					columnRecorded = true;
-					if(col < columnNames.length - 1)
+					if (col < columnNames.length - 1)
 					{
 						SELECTQuery += ",";
 					}
@@ -401,22 +501,23 @@ public class DandDDatabaseController
 			if (!columnRecorded)
 			{
 				SELECTQuery += " `" + tableName + "`.`" + columnNames[col] + "`";
-				if(col < columnNames.length - 1)
+				if (col < columnNames.length - 1)
 				{
 					SELECTQuery += ",";
 				}
 			}
 			columnRecorded = false;
 		}
-		
+
 		return SELECTQuery;
 	}
-	
+
 	/**
-	 * This is sub-method for buildSELECTQuery
-	 * This builds the FROM part of the query
-	 * SELECTS all tables required for the SELECT query
-	 * @param tableName Table to select from
+	 * This is sub-method for buildSELECTQuery This builds the FROM part of the
+	 * query SELECTS all tables required for the SELECT query
+	 * 
+	 * @param tableName
+	 *            Table to select from
 	 * @return String of the second part of the query
 	 */
 	private String buildFROMPartOfQuery(String tableName)
@@ -424,23 +525,25 @@ public class DandDDatabaseController
 		String FROMQuery = " FROM `" + tableName + "`";
 
 		String tablesAlreadySelected = "";
-		for (int row = 0; row < foriegnKeyRelationData.length; row++)
+		for (int row = 0; row < foreignKeyRelationData.length; row++)
 		{
-			if (!(tablesAlreadySelected.contains(foriegnKeyRelationData[row][0])))
+			if (!(tablesAlreadySelected.contains(foreignKeyRelationData[row].getRelatedTableName())))
 			{
-				tablesAlreadySelected += foriegnKeyRelationData[row][0] + " ";
-				FROMQuery += ", `" + foriegnKeyRelationData[row][0] + "`";
+				tablesAlreadySelected += foreignKeyRelationData[row].getRelatedTableName() + " ";
+				FROMQuery += ", `" + foreignKeyRelationData[row].getRelatedTableName() + "`";
 			}
 		}
-		
+
 		return FROMQuery;
 	}
-	
+
 	/**
-	 * This is sub-method for buildSELECTQuery
-	 * This builds the WHERE part of the query
-	 * Restricts table to only where the foriegn key column and related column are the same
-	 * @param tableName Table to select from
+	 * This is sub-method for buildSELECTQuery This builds the WHERE part of the
+	 * query Restricts table to only where the foriegn key column and related
+	 * column are the same
+	 * 
+	 * @param tableName
+	 *            Table to select from
 	 * @return String of the third part of the query
 	 */
 	private String buildWHEREPartOfQuery(String tableName)
@@ -450,33 +553,33 @@ public class DandDDatabaseController
 
 		for (int col = 0; col < columnNames.length; col++)
 		{
-			for (int row = 0; row < foriegnKeyRelationData.length; row++)
+			for (int row = 0; row < foreignKeyRelationData.length; row++)
 			{
-				if (columnNames[col].equals(foriegnKeyRelationData[row][2]))
+				if (columnNames[col].equals(foreignKeyRelationData[row].getColName()))
 				{
 					if (firstWhereRecorded)
 					{
 						WHEREQuery += "AND ";
 					}
-					WHEREQuery += "`" + foriegnKeyRelationData[row][0] + "`.`" + foriegnKeyRelationData[row][1] + "`";
+					WHEREQuery += "`" + foreignKeyRelationData[row].getRelatedTableName() + "`.`" + foreignKeyRelationData[row].getRelatedColumnName() + "`";
 					WHEREQuery += " = ";
 					WHEREQuery += "`" + tableName + "`.`" + columnNames[col] + "` ";
 					firstWhereRecorded = true;
 				}
 			}
 		}
-		
-		if(WHEREQuery.equals(" WHERE "))
+
+		if (WHEREQuery.equals(" WHERE "))
 		{
 			WHEREQuery = "";
 		}
-		
+
 		return WHEREQuery;
 	}
-	
-	//Run methods
-	//------------------------------------------------------------------------------------------------------------
-	
+
+	// Run methods
+	// ------------------------------------------------------------------------------------------------------------
+
 	/**
 	 * This method returns a 2d Array of the values retrieved from the query
 	 * call.
@@ -485,7 +588,7 @@ public class DandDDatabaseController
 	 *            The query to be sent to the database.
 	 * @return 2d array of the values retrieved from the query
 	 */
-	public String[][] runSELECTQueryTableGetTable(String query)
+	public String[][] runSELECTQueryGetTable(String query)
 	{
 		try
 		{
@@ -548,7 +651,7 @@ public class DandDDatabaseController
 			return null;
 		}
 	}
-	
+
 	/**
 	 * This method sends a update query to the database that changes a single
 	 * cell.
@@ -566,103 +669,38 @@ public class DandDDatabaseController
 	 */
 	public int runUPDATEQuery(String newData, int column, int row, String tableName)
 	{
-			collectTableInfo(tableName);
-			String UPDATEquery = ("UPDATE `dungeons_and_dragons`.`" + tableName + "` SET `" + columnNames[column] + "` = '" + newData + "' WHERE `" + tableName + "`.`" + primaryKeyColumnName + "` = " + findCellValue(primaryKeyColumnName, row));
-			try
-			{
-				Statement updateStatement = databaseConnection.createStatement();
-				int rowsAffected = updateStatement.executeUpdate(UPDATEquery);
-				updateStatement.close();
-				return rowsAffected;
-			}
-			catch (SQLException currentSQLError)
-			{
-				displayErrors(currentSQLError);
-				return 0;
-			}
+		collectTableInfo(tableName);
+		String UPDATEquery = ("UPDATE `dungeons_and_dragons`.`" + tableName + "` SET `" + columnNames[column] + "` = '" + newData + "' WHERE `" + tableName + "`.`" + primaryKeyColumnName + "` = " + findCellValue(primaryKeyColumnName, row));
+		try
+		{
+			Statement updateStatement = databaseConnection.createStatement();
+			int rowsAffected = updateStatement.executeUpdate(UPDATEquery);
+			updateStatement.close();
+			return rowsAffected;
+		}
+		catch (SQLException currentSQLError)
+		{
+			displayErrors(currentSQLError);
+			return 0;
+		}
 	}
-	
-	public boolean checkIfComboBoxForEdit(int columnNumber)
-	{
-		boolean needsAComboBox = false;
-		
-		for(int row = 0; row < foriegnKeyRelationData.length; row++)
-		{
-			if(foriegnKeyRelationData[row][2].equals(columnNames[columnNumber]))
-			{
-				needsAComboBox = true;
-			}
-		}
-		
-		return needsAComboBox;
-	}
-	
-	public String findId(String value, int columnNumber)
-	{
-		int relationRow = 1;
-		
-		for (int row = 0; row < foriegnKeyRelationData.length; row++)
-		{
-			if(columnNames[columnNumber].equals(foriegnKeyRelationData[row][2]))
-			{
-				relationRow = row;
-			}
-		}
-		
-		String query = "SELECT `" + foriegnKeyRelationData[relationRow][0] + "`.`" + foriegnKeyRelationData[relationRow][1] 
-				+ "`, `"+ foriegnKeyRelationData[relationRow][0] + "`.`";
-		
-		for (int location = 0; location < DandDTableMostImportantColumnNames.length; location++)
-		{
-			if (foriegnKeyRelationData[relationRow][0].equals(DandDTableMostImportantColumnNames[location][0]))
-			{
-				query += DandDTableMostImportantColumnNames[location][1];
-			}
-		}
-		
-		query += "` FROM `" + foriegnKeyRelationData[relationRow][0] + "`";
-		
-		String[][] idAndValues = runSELECTQueryTableGetTable(query);
-		String newId = "";
-		
-		for(int row = 0; row < idAndValues.length; row++)
-		{
-			for(int col = 0; col < idAndValues[0].length; col++)
-			{
-				if(idAndValues[row][1].equals(value))
-				{
-					newId = idAndValues[row][0];
-				}
-			}
-		}
-		
-		return newId;
-	}
-	
+
+	/**
+	 * Gets the values to be used in an individual column's JComboBoxes
+	 * @param columnNumber the column that the values will be used in
+	 * @return the values to put into the JComboBoxes
+	 */
 	public String[] getComboBoxForEdit(int columnNumber)
 	{
-		int relationRow = -1;
-		for(int row = 0; row < foriegnKeyRelationData.length; row++)
-		{
-			if(foriegnKeyRelationData[row][2].equals(columnNames[columnNumber]))
-			{
-				relationRow = row;
-			}
-		}
-		
-		String query = "SELECT `" + foriegnKeyRelationData[relationRow][0] + "`.`";
-		
-		for (int location = 0; location < DandDTableMostImportantColumnNames.length; location++)
-		{
-			if (foriegnKeyRelationData[relationRow][0].equals(DandDTableMostImportantColumnNames[location][0]))
-			{
-				query += DandDTableMostImportantColumnNames[location][1];
-			}
-		}
-		
-		query += "` FROM " + foriegnKeyRelationData[relationRow][0];
+		int relationRow = findRelationRow(columnNumber);
+
+		String query = "SELECT `" + foreignKeyRelationData[relationRow].getRelatedTableName() + "`.`";
+
+		query += findMostImportantColumnName(relationRow);
+
+		query += "` FROM " + foreignKeyRelationData[relationRow].getRelatedTableName();
 		String[] columnValues = new String[0];
-		
+
 		try
 		{
 			Statement SELECTStatement = databaseConnection.createStatement();
@@ -683,14 +721,14 @@ public class DandDDatabaseController
 			displayErrors(currentSQLError);
 			return null;
 		}
-		
+
 		String[] columnComboBoxData = new String[columnValues.length];
-		
-		for(int place = 0; place < columnValues.length; place++)
+
+		for (int place = 0; place < columnValues.length; place++)
 		{
 			columnComboBoxData[place] = columnValues[place];
 		}
-		
+
 		return columnComboBoxData;
 	}
 }

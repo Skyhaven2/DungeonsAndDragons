@@ -19,10 +19,21 @@ import dungeonsanddragons.controller.DandDAppController;
 
 public class DandDStartPanel extends JPanel
 {
+	/**
+	 * reference to the app controller
+	 */
 	private DandDAppController baseController;
+	/**
+	 * the layout used for the DandDStartPanel
+	 */
 	private SpringLayout layout;
-	private JButton toEditPanelButton;
+	/**
+	 * The image used for the background
+	 */
 	private ImageIcon backgroundImage = new ImageIcon(DandDSearchPanel.class.getResource("/dungeonsanddragons/view/images/dd_wallpaper.jpg"));
+	/**
+	 * The label that contains the background image
+	 */
 	private JLabel background;
 
 	public DandDStartPanel(DandDAppController baseController)
@@ -32,25 +43,16 @@ public class DandDStartPanel extends JPanel
 		background = new JLabel(backgroundImage);
 
 		setupPanel();
-		setupLayout();
-		setupListeners();
 	}
 
+	/**
+	 * adds components to the panel and sets their properties
+	 */
 	private void setupPanel()
 	{
 		this.setSize(1195, 775);
 		this.setFocusable(true);
 		this.setLayout(layout);
 		this.add(background);
-	}
-
-	private void setupLayout()
-	{
-		
-	}
-
-	private void setupListeners()
-	{
-
 	}
 }

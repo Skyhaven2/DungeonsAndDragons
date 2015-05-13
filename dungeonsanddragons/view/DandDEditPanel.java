@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultCellEditor;
@@ -17,6 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.SpringLayout;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -26,20 +28,66 @@ import dungeonsanddragons.controller.DandDAppController;
 
 public class DandDEditPanel extends JPanel
 {
+	/**
+	 * Reference to the app controller
+	 */
 	private DandDAppController baseController;
+	/**
+	 * Table column renderer used for JTextAreas
+	 * will be used for columns that do not contain foreign keys
+	 */
 	private TableRender myRender;
+	/**
+	 * Table column renderer used for JComboBoxes
+	 * will be used for columns that do contain foreign keys
+	 */
 	private JComboBoxTableRender myJComboBoxTableRender;
+	/**
+	 * DandDEditPanel layout
+	 */
 	private SpringLayout layout;
+	/**
+	 * button used to travel to the search page
+	 */
 	private JButton toSearchPanelButton;
+	/**
+	 * D&D logo placed at the top of each page
+	 */
 	private ImageIcon DandDLogo;
+	/**
+	 * The label that contains the D&D logo
+	 */
 	private JLabel DandDLogoLabel;
+	/**
+	 * The pages title, in this case it is the edit page
+	 */
 	private JLabel title;
+	/**
+	 * the model to be used with the generated data table
+	 */
 	private DefaultTableModel editTableModel;
+	/**
+	 * the table to be used with the generated data table
+	 */
 	private JTable editTable;
-	private JComboBox tablesComboBox;
+	/**
+	 * Contains the table names of the tables available in the d and d database
+	 * generates a table when a table is selected
+	 */
+	private JComboBox<String> tablesComboBox;
+	/**
+	 * Contains the data table
+	 */
 	private JScrollPane editTablePane;
+	/**
+	 * Contains the table names of the tables available in the d and d database
+	 */
 	private String[] tablesComboBoxArray;
+	/**
+	 * the name of the current table being displayed
+	 */
 	private String currentSelectedTable;
+	private ArrayList<JTextField> insertFields;
 
 	public DandDEditPanel(DandDAppController baseController)
 	{
@@ -64,6 +112,9 @@ public class DandDEditPanel extends JPanel
 		setupListeners();
 	}
 
+	/**
+	 * adds components to the panel and sets the properties of them
+	 */
 	private void setupPanel()
 	{
 		this.setSize(1195, 775);
@@ -82,6 +133,9 @@ public class DandDEditPanel extends JPanel
 		this.add(tablesComboBox);
 	}
 
+	/**
+	 * sets the components location on the panel
+	 */
 	private void setupLayout()
 	{
 		layout.putConstraint(SpringLayout.SOUTH, toSearchPanelButton, -10, SpringLayout.SOUTH, this);
@@ -95,6 +149,9 @@ public class DandDEditPanel extends JPanel
 		layout.putConstraint(SpringLayout.NORTH, DandDLogoLabel, 15, SpringLayout.NORTH, this);
 	}
 
+	/**
+	 * adds the listeners to the components that require one
+	 */
 	private void setupListeners()
 	{
 		toSearchPanelButton.addActionListener(new ActionListener()
@@ -119,7 +176,7 @@ public class DandDEditPanel extends JPanel
 				{
 					currentSelectedTable = tablesComboBox.getSelectedItem().toString();
 					String query = baseController.getDBController().buildSELECTQuery(currentSelectedTable);
-					String[][] newData = baseController.getDBController().runSELECTQueryTableGetTable(query);
+					String[][] newData = baseController.getDBController().runSELECTQueryGetTable(query);
 					String[] columnHeaders = baseController.getDBController().runSELECTQueryGetColumnNames(query);
 					editTableModel.setDataVector(newData, columnHeaders);
 					editTable.setModel(editTableModel);
@@ -143,6 +200,8 @@ public class DandDEditPanel extends JPanel
 					}
 
 					editTable.getTableHeader().setFont(new Font(null, Font.BOLD, 12));
+					
+					buildInsertTextFields(columnHeaders.length);
 				}
 			}
 
@@ -164,10 +223,6 @@ public class DandDEditPanel extends JPanel
 						{
 							isJCombobox = true;
 						}
-						else
-						{
-
-						}
 					}
 					catch (Exception currentException)
 					{
@@ -181,7 +236,7 @@ public class DandDEditPanel extends JPanel
 							int row = change.getFirstRow();
 							int column = change.getColumn();
 							Object newData = editTableModel.getValueAt(row, column);
-							String id = baseController.getDBController().findId(newData.toString(), column);
+							String id = baseController.getDBController().findIdInRelatedTable(newData.toString(), column);
 
 							baseController.getDBController().runUPDATEQuery(id, column, row, currentSelectedTable);
 						}
@@ -212,6 +267,11 @@ public class DandDEditPanel extends JPanel
 		});
 	}
 
+	/**
+	 * finds the tables available in the d and d database and puts them
+	 * into the tablesComboBoxArray. The first entry will always be the blank table
+	 * "..."
+	 */
 	private void buildTableComboBoxArray()
 	{
 		String[] tablesAvailable = baseController.getDBController().findTablesDandD();
@@ -221,5 +281,26 @@ public class DandDEditPanel extends JPanel
 		{
 			tablesComboBoxArray[col + 1] = tablesAvailable[col];
 		}
+	}
+	
+	private void buildInsertTextFields(int numberOfColumns)
+	{
+//		JTextField currentField = new JTextField(20);
+//		layout.putConstraint(SpringLayout.NORTH, currentField, 10, SpringLayout.SOUTH, editTablePane);
+//		layout.putConstraint(SpringLayout.WEST, currentField, 10, SpringLayout.EAST, editTablePane);
+//		this.add(currentField);
+//		currentField.setVisible(true);
+		
+//		for(int col = 0; col < numberOfColumns; col++)
+//		{
+//			if(col == 0)
+//			{
+//				JTextField currentField = new JTextField(editTable.getColumnModel().getColumn(col).getWidth());
+//				layout.putConstraint(SpringLayout.NORTH, currentField, 0, SpringLayout.SOUTH, editTable);
+//				layout.putConstraint(SpringLayout.WEST, currentField, 0, SpringLayout.EAST, editTable);
+//				this.add(currentField);
+//				currentField.setVisible(true);
+//			}
+//		}
 	}
 }
