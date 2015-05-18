@@ -33,13 +33,13 @@ public class DandDEditPanel extends JPanel
 	 */
 	private DandDAppController baseController;
 	/**
-	 * Table column renderer used for JTextAreas
-	 * will be used for columns that do not contain foreign keys
+	 * Table column renderer used for JTextAreas will be used for columns that
+	 * do not contain foreign keys
 	 */
 	private TableRender myRender;
 	/**
-	 * Table column renderer used for JComboBoxes
-	 * will be used for columns that do contain foreign keys
+	 * Table column renderer used for JComboBoxes will be used for columns that
+	 * do contain foreign keys
 	 */
 	private JComboBoxTableRender myJComboBoxTableRender;
 	/**
@@ -88,6 +88,7 @@ public class DandDEditPanel extends JPanel
 	 */
 	private String currentSelectedTable;
 	private ArrayList<JTextField> insertFields;
+	private JButton insertButton;
 
 	public DandDEditPanel(DandDAppController baseController)
 	{
@@ -106,6 +107,8 @@ public class DandDEditPanel extends JPanel
 		Dimension searchTablePaneDimension = new Dimension(700, 400);
 		editTablePane.setPreferredSize(searchTablePaneDimension);
 		tablesComboBox = new JComboBox(tablesComboBoxArray);
+		insertFields = new ArrayList<JTextField>();
+		insertButton = new JButton("Insert");
 
 		setupPanel();
 		setupLayout();
@@ -131,6 +134,8 @@ public class DandDEditPanel extends JPanel
 		this.add(title);
 		this.add(editTablePane);
 		this.add(tablesComboBox);
+		this.add(insertButton);
+		insertButton.setVisible(false);
 	}
 
 	/**
@@ -147,6 +152,8 @@ public class DandDEditPanel extends JPanel
 		layout.putConstraint(SpringLayout.NORTH, editTablePane, 6, SpringLayout.SOUTH, tablesComboBox);
 		layout.putConstraint(layout.HORIZONTAL_CENTER, editTablePane, 0, layout.HORIZONTAL_CENTER, this);
 		layout.putConstraint(SpringLayout.NORTH, DandDLogoLabel, 15, SpringLayout.NORTH, this);
+		layout.putConstraint(SpringLayout.NORTH, insertButton, 5, SpringLayout.SOUTH, editTablePane);
+		layout.putConstraint(layout.HORIZONTAL_CENTER, insertButton, 0, layout.HORIZONTAL_CENTER, this);
 	}
 
 	/**
@@ -174,6 +181,8 @@ public class DandDEditPanel extends JPanel
 
 				if (e.getStateChange() == ItemEvent.SELECTED && !(tablesComboBox.getSelectedItem().toString().equals("...")))
 				{
+					buildInsertTextFields(0);
+					insertButton.setVisible(true);
 					currentSelectedTable = tablesComboBox.getSelectedItem().toString();
 					String query = baseController.getDBController().buildSELECTQuery(currentSelectedTable);
 					String[][] newData = baseController.getDBController().runSELECTQueryGetTable(query);
@@ -200,8 +209,6 @@ public class DandDEditPanel extends JPanel
 					}
 
 					editTable.getTableHeader().setFont(new Font(null, Font.BOLD, 12));
-					
-					buildInsertTextFields(columnHeaders.length);
 				}
 			}
 
@@ -265,12 +272,20 @@ public class DandDEditPanel extends JPanel
 			}
 
 		});
+
+		insertButton.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent click)
+			{
+				buildInsertTextFields(editTable.getColumnCount());
+			}
+		});
 	}
 
 	/**
-	 * finds the tables available in the d and d database and puts them
-	 * into the tablesComboBoxArray. The first entry will always be the blank table
-	 * "..."
+	 * finds the tables available in the d and d database and puts them into the
+	 * tablesComboBoxArray. The first entry will always be the blank table "..."
 	 */
 	private void buildTableComboBoxArray()
 	{
@@ -282,25 +297,42 @@ public class DandDEditPanel extends JPanel
 			tablesComboBoxArray[col + 1] = tablesAvailable[col];
 		}
 	}
-	
+
 	private void buildInsertTextFields(int numberOfColumns)
 	{
-//		JTextField currentField = new JTextField(20);
-//		layout.putConstraint(SpringLayout.NORTH, currentField, 10, SpringLayout.SOUTH, editTablePane);
-//		layout.putConstraint(SpringLayout.WEST, currentField, 10, SpringLayout.EAST, editTablePane);
-//		this.add(currentField);
-//		currentField.setVisible(true);
-		
-//		for(int col = 0; col < numberOfColumns; col++)
-//		{
-//			if(col == 0)
-//			{
-//				JTextField currentField = new JTextField(editTable.getColumnModel().getColumn(col).getWidth());
-//				layout.putConstraint(SpringLayout.NORTH, currentField, 0, SpringLayout.SOUTH, editTable);
-//				layout.putConstraint(SpringLayout.WEST, currentField, 0, SpringLayout.EAST, editTable);
-//				this.add(currentField);
-//				currentField.setVisible(true);
-//			}
-//		}
+		for (int location = 0; location < insertFields.size(); location++)
+		{
+			insertFields.get(location).setVisible(false);
+			this.remove(insertFields.get(location));
+		}
+		insertFields.clear();
+		this.revalidate();
+
+		for (int col = 0; col < numberOfColumns; col++)
+		{
+			JTextField currentField = new JTextField();
+			int width = editTablePane.getWidth() / numberOfColumns;
+			if (editTablePane.getVerticalScrollBar().isVisible())
+			{
+				System.out.println(editTablePane.getVerticalScrollBar().getWidth());
+				width -= (editTablePane.getVerticalScrollBar().getWidth() / numberOfColumns);
+			}
+			Dimension currentFieldDimension = new Dimension(width, insertButton.getHeight());
+			currentField.setPreferredSize(currentFieldDimension);
+			layout.putConstraint(SpringLayout.NORTH, currentField, 20, SpringLayout.SOUTH, insertButton);
+			if (col == 0)
+			{
+				layout.putConstraint(SpringLayout.WEST, currentField, 0, SpringLayout.WEST, editTablePane);
+			}
+			else
+			{
+				layout.putConstraint(SpringLayout.WEST, currentField, 0, SpringLayout.EAST, insertFields.get(col - 1));
+			}
+			this.add(currentField);
+			currentField.setVisible(true);
+			insertFields.add(currentField);
+			this.revalidate();
+		}
+
 	}
 }
